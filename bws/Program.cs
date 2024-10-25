@@ -14,6 +14,9 @@ using Microsoft.IdentityModel.Tokens;
 
 internal class Program
 {
+    /// <summary>
+    /// Represents various levels of detail for message output in the console.
+    /// </summary>
     public enum Verbosity { Quiet, Minimal, Normal, Detailed, Diagnostic }
 
     static async Task<int> Main(string[] args)
@@ -62,143 +65,259 @@ internal class Program
     }
 
     // call LivenessDetection API, see https://developer.bioid.com/bws/grpc/livenessdetection
-    internal static async Task LiveDetectionAsync(string host, string clientId, string key, FileInfo[] files, string tag, Verbosity verbosity)
+    internal static async Task<int> LiveDetectionAsync(string host, string clientId, string key, FileInfo[] files, string tag, Verbosity verbosity)
     {
-        // create the gRPC channel
-        using GrpcChannel channel = CreateAuthenticatedChannel(new Uri(host), GenerateToken(clientId, key));
-        if (verbosity > Verbosity.Quiet) { Console.WriteLine($"Calling LivenessDetection at {channel.Target}..."); }
+        try
+        {
+            // Create a secure channel for gRPC communication.
+            using GrpcChannel channel = CreateAuthenticatedChannel(new Uri(host), GenerateToken(clientId, key));
+            if (verbosity > Verbosity.Quiet) { Console.WriteLine($"Calling LivenessDetection at {channel.Target}..."); }
 
-        // create request
-        var client = new BioIDWebService.BioIDWebServiceClient(channel);
-        var request = new LivenessDetectionRequest();
-        foreach (var file in files)
-        {
-            request.LiveImages.Add(new ImageData { Image = ByteString.CopyFrom(File.ReadAllBytes(file.FullName)) });
-        }
-        // tag is applied only to second image
-        if (request.LiveImages.Count > 1 && !string.IsNullOrWhiteSpace(tag)) { request.LiveImages[1].Tags.Add(tag); }
+            // Create the BioID Web Service client.
+            var client = new BioIDWebService.BioIDWebServiceClient(channel);
+            // Create a livenessdetection request.
+            var request = new LivenessDetectionRequest();
+            foreach (var file in files)
+            {
+                // Add the live images to the liveness detection request.
+                request.LiveImages.Add(new ImageData { Image = ByteString.CopyFrom(File.ReadAllBytes(file.FullName)) });
+            }
+            // Tag is applied only to second image.
+            if (request.LiveImages.Count > 1 && !string.IsNullOrWhiteSpace(tag)) { request.LiveImages[1].Tags.Add(tag); }
 
-        // call BWS
-        var call = client.LivenessDetectionAsync(request);
-        LivenessDetectionResponse response = await call.ResponseAsync.ConfigureAwait(false);
+            // Call BWS
+            var call = client.LivenessDetectionAsync(request);
 
-        // output
-        if (verbosity > Verbosity.Quiet)
-        {
-            Console.WriteLine($"Server response: {response.Status}");
-            Console.WriteLine($"Live: {response.Live} ({response.LivenessScore:F2})");
-            DumpErrors(response.Errors);
+            // Reading the call response.
+            LivenessDetectionResponse response = await call.ResponseAsync.ConfigureAwait(false);
+
+            // Output
+            if (verbosity > Verbosity.Quiet)
+            {
+                Console.WriteLine($"Server response: {response.Status}");
+                Console.WriteLine($"Live: {response.Live} ({response.LivenessScore:F2})");
+                DumpErrors(response.Errors);
+            }
+            if (verbosity >= Verbosity.Normal)
+            {
+                DumpMetadata(call.GetTrailers(), "Response Trailers");
+            }
+            if (verbosity >= Verbosity.Detailed)
+            {
+                DumpMetadata(await call.ResponseHeadersAsync.ConfigureAwait(false), "Response Headers");
+                DumpImageProperties(response.ImageProperties);
+            }
+            return 0;
         }
-        if (verbosity > Verbosity.Minimal)
+        catch (RpcException ex)
         {
-            DumpMetadata(call.GetTrailers(), "Response Trailers");
+            // handle gRPC errors
+            if (verbosity > Verbosity.Quiet)
+            {
+                Console.Write($"gRPC error from calling the service: {ex.Status.StatusCode} - '{ex.Status.Detail}'");
+                if (verbosity >= Verbosity.Normal)
+                {
+                    DumpMetadata(ex.Trailers, "Response Trailers");
+                }
+            }
+            return 1;
         }
-        if (verbosity > Verbosity.Normal)
+        catch (Exception ex)
         {
-            DumpMetadata(await call.ResponseHeadersAsync.ConfigureAwait(false), "Response Headers");
-            DumpImageProperties(response.ImageProperties);
+            // handle unexpected errors
+            if (verbosity > Verbosity.Quiet)
+            {
+                Console.Write($"Unexpected error calling the service: {ex.Message}");
+            }
+            return 2;
         }
     }
 
     // call VideoLivenessDetection API, see https://developer.bioid.com/bws/grpc/videolivenessdetection
-    internal static async Task VideoLiveDetectionAsync(string host, string clientId, string key, FileInfo[] files, Verbosity verbosity)
+    internal static async Task<int> VideoLiveDetectionAsync(string host, string clientId, string key, FileInfo[] files, Verbosity verbosity)
     {
-        // create the gRPC channel
-        using GrpcChannel channel = CreateAuthenticatedChannel(new Uri(host), GenerateToken(clientId, key));
-        if (verbosity > Verbosity.Quiet) { Console.WriteLine($"Calling VideoLivenessDetection at {channel.Target}..."); }
-
-        // create request
-        var client = new BioIDWebService.BioIDWebServiceClient(channel);
-        var request = new VideoLivenessDetectionRequest
+        try
         {
-            Video = ByteString.CopyFrom(File.ReadAllBytes(files.First().FullName))
-        };
+            // Create a secure channel for gRPC communication.
+            using GrpcChannel channel = CreateAuthenticatedChannel(new Uri(host), GenerateToken(clientId, key));
+            if (verbosity > Verbosity.Quiet) { Console.WriteLine($"Calling VideoLivenessDetection at {channel.Target}..."); }
 
-        // call BWS
-        var call = client.VideoLivenessDetectionAsync(request);
-        LivenessDetectionResponse response = await call.ResponseAsync.ConfigureAwait(false);
+            // Create the BioID Web Service client.
+            var client = new BioIDWebService.BioIDWebServiceClient(channel);
+            // Create a videolivenessdetection request.
+            var request = new VideoLivenessDetectionRequest
+            {
+                // Add the video to the request.
+                Video = ByteString.CopyFrom(File.ReadAllBytes(files.First().FullName))
+            };
 
-        // output
-        if (verbosity > Verbosity.Quiet)
-        {
-            Console.WriteLine($"Server response: {response.Status}");
-            Console.WriteLine($"Live: {response.Live} ({response.LivenessScore:F2})");
-            DumpErrors(response.Errors);
+            // Call BWS
+            var call = client.VideoLivenessDetectionAsync(request);
+            // Reading the call response.
+            LivenessDetectionResponse response = await call.ResponseAsync.ConfigureAwait(false);
+
+            // Output
+            if (verbosity > Verbosity.Quiet)
+            {
+                Console.WriteLine($"Server response: {response.Status}");
+                Console.WriteLine($"Live: {response.Live} ({response.LivenessScore:F2})");
+                DumpErrors(response.Errors);
+            }
+            if (verbosity >= Verbosity.Normal)
+            {
+                DumpMetadata(call.GetTrailers(), "Response Trailers");
+            }
+            if (verbosity >= Verbosity.Detailed)
+            {
+                DumpMetadata(await call.ResponseHeadersAsync.ConfigureAwait(false), "Response Headers");
+                DumpImageProperties(response.ImageProperties);
+            }
+            return 0;
         }
-        if (verbosity > Verbosity.Minimal)
+        catch (RpcException ex)
         {
-            DumpMetadata(call.GetTrailers(), "Response Trailers");
+            // handle gRPC errors
+            if (verbosity > Verbosity.Quiet)
+            {
+                Console.Write($"gRPC error from calling the service: {ex.Status.StatusCode} - '{ex.Status.Detail}'");
+                if (verbosity >= Verbosity.Normal)
+                {
+                    DumpMetadata(ex.Trailers, "Response Trailers");
+                }
+            }
+            return 1;
         }
-        if (verbosity > Verbosity.Normal)
+        catch (Exception ex)
         {
-            DumpMetadata(await call.ResponseHeadersAsync.ConfigureAwait(false), "Response Headers");
-            DumpImageProperties(response.ImageProperties);
+            // handle unexpected errors
+            if (verbosity > Verbosity.Quiet)
+            {
+                Console.Write($"Unexpected error calling the service: {ex.Message}");
+            }
+            return 2;
         }
     }
 
     // call PhotoVerify API, see https://developer.bioid.com/bws/grpc/photoverify
-    internal static async Task PhotoVerifyAsync(string host, string clientId, string key, FileInfo[] files, bool disablelive, string tag, FileInfo photo, Verbosity verbosity)
+    internal static async Task<int> PhotoVerifyAsync(string host, string clientId, string key, FileInfo[] files, bool disablelive, string tag, FileInfo photo, Verbosity verbosity)
     {
-        // create the gRPC channel
-        using GrpcChannel channel = CreateAuthenticatedChannel(new Uri(host), GenerateToken(clientId, key));
-        if (verbosity > Verbosity.Quiet) { Console.WriteLine($"Calling PhotoVerify at {channel.Target}..."); }
+        try
+        {
+            // Create a secure channel for gRPC communication.
+            using GrpcChannel channel = CreateAuthenticatedChannel(new Uri(host), GenerateToken(clientId, key));
+            if (verbosity > Verbosity.Quiet) { Console.WriteLine($"Calling PhotoVerify at {channel.Target}..."); }
 
-        // create request
-        var client = new BioIDWebService.BioIDWebServiceClient(channel);
-        var request = new PhotoVerifyRequest
-        {
-            DisableLivenessDetection = disablelive,
-            Photo = ByteString.CopyFrom(File.ReadAllBytes(photo.FullName))
-        };
-        foreach (var file in files)
-        {
-            request.LiveImages.Add(new ImageData { Image = ByteString.CopyFrom(File.ReadAllBytes(file.FullName)) });
-        }
-        // tag is applied only to second image
-        if (request.LiveImages.Count > 1 && !string.IsNullOrWhiteSpace(tag)) { request.LiveImages[1].Tags.Add(tag); }
+            // Create the BioID Web Service client.
+            var client = new BioIDWebService.BioIDWebServiceClient(channel);
+            // Create a photoverify request.
+            var request = new PhotoVerifyRequest
+            {
+                // Set livenessdetection
+                DisableLivenessDetection = disablelive,
+                // Add ID photo to the request
+                Photo = ByteString.CopyFrom(File.ReadAllBytes(photo.FullName))
+            };
+            // Add the live images to the liveness detection request.
+            foreach (var file in files)
+            {
+                request.LiveImages.Add(new ImageData { Image = ByteString.CopyFrom(File.ReadAllBytes(file.FullName)) });
+            }
+            // Tag is applied only to second image
+            if (request.LiveImages.Count > 1 && !string.IsNullOrWhiteSpace(tag)) { request.LiveImages[1].Tags.Add(tag); }
 
-        // call BWS
-        var call = client.PhotoVerifyAsync(request);
-        PhotoVerifyResponse response = await call.ResponseAsync.ConfigureAwait(false);
+            // Call BWS
+            var call = client.PhotoVerifyAsync(request);
+            // Reading the call response.
+            PhotoVerifyResponse response = await call.ResponseAsync.ConfigureAwait(false);
 
-        // output
-        if (verbosity > Verbosity.Quiet)
-        {
-            Console.WriteLine($"Server response: {response.Status}");
-            Console.WriteLine($"VerificationLevel: {response.VerificationLevel} ({response.VerificationScore})");
-            Console.WriteLine($"Live: {response.Live} ({response.LivenessScore:F2})");
-            DumpErrors(response.Errors);
+            // Output
+            if (verbosity > Verbosity.Quiet)
+            {
+                Console.WriteLine($"Server response: {response.Status}");
+                Console.WriteLine($"VerificationLevel: {response.VerificationLevel} ({response.VerificationScore})");
+                Console.WriteLine($"Live: {response.Live} ({response.LivenessScore:F2})");
+                DumpErrors(response.Errors);
+            }
+            if (verbosity >= Verbosity.Normal)
+            {
+                DumpMetadata(call.GetTrailers(), "Response Trailers");
+            }
+            if (verbosity >= Verbosity.Detailed)
+            {
+                DumpMetadata(await call.ResponseHeadersAsync.ConfigureAwait(false), "Response Headers");
+                DumpImageProperties(response.ImageProperties);
+                Console.WriteLine($"PhotoProperties: {response.PhotoProperties}");
+            }
+            return 0;
         }
-        if (verbosity > Verbosity.Minimal)
+        catch (RpcException ex)
         {
-            DumpMetadata(call.GetTrailers(), "Response Trailers");
+            // handle gRPC errors
+            if (verbosity > Verbosity.Quiet)
+            {
+                Console.Write($"gRPC error from calling the service: {ex.Status.StatusCode} - '{ex.Status.Detail}'");
+                if (verbosity >= Verbosity.Normal)
+                {
+                    DumpMetadata(ex.Trailers, "Response Trailers");
+                }
+            }
+            return 1;
         }
-        if (verbosity > Verbosity.Normal)
+        catch (Exception ex)
         {
-            DumpMetadata(await call.ResponseHeadersAsync.ConfigureAwait(false), "Response Headers");
-            DumpImageProperties(response.ImageProperties);
-            Console.WriteLine($"PhotoProperties: {response.PhotoProperties}");
+            // handle unexpected errors
+            if (verbosity > Verbosity.Quiet)
+            {
+                Console.Write($"Unexpected error calling the service: {ex.Message}");
+            }
+            return 2;
         }
     }
 
-    // call HealthCheck API
-    internal static async Task HealthCheckAsync(string host, Verbosity verbosity)
+    // Call HealthCheck API
+    internal static async Task<int> HealthCheckAsync(string host, Verbosity verbosity)
     {
-        // create the gRPC channel
-        using GrpcChannel channel = GrpcChannel.ForAddress(host);
-        var client = new Health.HealthClient(channel);
+        try
+        {
+            // Create the gRPC channel
+            using GrpcChannel channel = GrpcChannel.ForAddress(host);
+            var client = new Health.HealthClient(channel);
 
-        // perform liveness probe
-        var check = await client.CheckAsync(new HealthCheckRequest { Service = "liveness" }).ConfigureAwait(false);
-        if (verbosity > Verbosity.Quiet)
-        {
-            Console.WriteLine($"BWS gRPC liveness-check @ {host}: {check.Status}");
+            // Perform readiness probe
+            var check = await client.CheckAsync(new HealthCheckRequest { Service = "readiness" }).ConfigureAwait(false);
+            if (verbosity > Verbosity.Quiet)
+            {
+                Console.WriteLine($"BWS gRPC readiness-check @ {host}: {check.Status}");
+            }
+            if (verbosity >= Verbosity.Detailed)
+            {
+                // Perform liveness probe
+                check = await client.CheckAsync(new HealthCheckRequest { Service = "liveness" }).ConfigureAwait(false);
+                Console.WriteLine($"BWS gRPC liveness-check @ {host}: {check.Status}");
+            }
+            return 0;
         }
-        if (verbosity > Verbosity.Normal)
+        catch (RpcException ex)
         {
-            // perform readiness probe
-            check = await client.CheckAsync(new HealthCheckRequest { Service = "readiness" }).ConfigureAwait(false);
-            Console.WriteLine($"BWS gRPC readiness-check @ {host}: {check.Status}");
+            // handle gRPC errors
+            if (verbosity > Verbosity.Quiet)
+            {
+                Console.Write($"gRPC error from calling the service: {ex.Status.StatusCode} - '{ex.Status.Detail}'");
+                if (verbosity >= Verbosity.Normal)
+                {
+                    DumpMetadata(ex.Trailers, "Response Trailers");
+                }
+            }
+            return 1;
+        }
+        catch (Exception ex)
+        {
+            // handle unexpected errors
+            if (verbosity > Verbosity.Quiet)
+            {
+                Console.Write($"Unexpected error calling the service: {ex.Message}");
+            }
+            return 2;
         }
     }
 
@@ -216,7 +335,7 @@ internal class Program
     /// <returns>The created gRPC channel.</returns>
     static GrpcChannel CreateAuthenticatedChannel(Uri host, string token)
     {
-        // we want to use JWT Bearer token authentication for each call (i.e. CallCredentials)
+        // We want to use JWT Bearer token authentication for each call (i.e. CallCredentials)
         var credentials = CallCredentials.FromInterceptor((context, metadata) =>
         {
             metadata.Add("Reference-Number", $"bws-cli-{DateTime.UtcNow.Ticks}");
@@ -225,7 +344,7 @@ internal class Program
         });
 
         bool insecure = host.Scheme != Uri.UriSchemeHttps;
-        // create the GRPC channel with our call credentials
+        // Create the GRPC channel with our call credentials
         return GrpcChannel.ForAddress(host, new GrpcChannelOptions
         {
             // TLS is highly recommended, but in case of an insecure connection we allow the use of the JWT nonetheless
@@ -262,6 +381,12 @@ internal class Program
         return jwt;
     }
 
+
+    /// <summary>
+    /// Read the gRPC response headers and display them in the console.
+    /// </summary>
+    /// <param name="entries">A collection of grpc metadata consisting of key-value pairs.</param>
+    /// <param name="title">A title to be displayed in console before the metadata.</param>
     static void DumpMetadata(Metadata entries, string title)
     {
         if (entries.Count != 0)
@@ -274,6 +399,11 @@ internal class Program
         }
     }
 
+    /// <summary>
+    /// Outputs a collection of errors to the console if any errors are present.
+    /// Each error is displayed with its error code and corresponding message.
+    /// </summary>
+    /// <param name="errors">A collection of <see cref="JobError"/> objects to be output.</param>
     static void DumpErrors(IEnumerable<JobError> errors)
     {
         if (errors.Any())
@@ -288,6 +418,10 @@ internal class Program
         }
     }
 
+    /// <summary>
+    /// Outputs a collection of image properties as calculated by the BioID Web Service to the console.
+    /// </summary>
+    /// <param name="imageProperties">A collection of <see cref="ImageProperties"/> objects to be output</param>
     static void DumpImageProperties(IEnumerable<ImageProperties> imageProperties)
     {
         foreach (ImageProperties properties in imageProperties) { Console.WriteLine($"ImageProperties: {properties}"); }
