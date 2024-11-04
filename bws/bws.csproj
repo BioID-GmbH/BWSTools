@@ -14,7 +14,6 @@
 
   <ItemGroup>
     <None Remove="bws.proto" />
-    <None Remove="bwsmessages.proto" />
   </ItemGroup>
 
   <ItemGroup>
@@ -30,7 +29,6 @@
 
   <ItemGroup>
     <Protobuf Include="bws.proto" GrpcServices="Client" />
-    <Protobuf Include="bwsmessages.proto" />
   </ItemGroup>
  
   <ProjectExtensions><VisualStudio><UserProperties properties_4launchsettings_1json__JsonSchema="https://json.schemastore.org/libman.json" /></VisualStudio></ProjectExtensions>
