@@ -1,8 +1,7 @@
-﻿using System.CommandLine;
-using System.CommandLine.Parsing;
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
+﻿using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
+using System.CommandLine;
+using System.CommandLine.Parsing;
 
 namespace BioID.JwtGenerator
 {
@@ -17,7 +16,7 @@ namespace BioID.JwtGenerator
             var issOption = new Option<string>("--iss", "The issuer of the generated JWT. Defaults to the subject.");
             var audOption = new Option<string>("--aud", "The audience for the generated token."); audOption.SetDefaultValue("BWS");
             var algOption = new Option<string>("--alg", "The cryptographic algorithm used for the JWS, see https://datatracker.ietf.org/doc/html/rfc7518#section-3");
-            algOption.SetDefaultValue(SecurityAlgorithms.HmacSha512);
+            algOption.SetDefaultValue(SecurityAlgorithms.HmacSha256);
 
             // define command and handler
             var rootCommand = new RootCommand("BioID JWT generator mainly for use with BWS 3.")
@@ -36,11 +35,10 @@ namespace BioID.JwtGenerator
             {
                 var securityKey = new SymmetricSecurityKey(Convert.FromBase64String(key));
                 var credentials = new SigningCredentials(securityKey, algorithm);
-                List<Claim> claims = [new Claim(JwtRegisteredClaimNames.Sub, subject)];
-                var now = DateTime.UtcNow;
-                string jwt = new JwtSecurityTokenHandler().CreateEncodedJwt(string.IsNullOrWhiteSpace(issuer) ? subject : issuer,
-                    audience, new ClaimsIdentity(claims), now, now.AddMinutes(expireMinutes), now, credentials);
-
+                var claims = new Dictionary<string, object> { [JwtRegisteredClaimNames.Sub] = subject };
+                var descriptor = new SecurityTokenDescriptor { Claims = claims, Issuer = string.IsNullOrWhiteSpace(issuer) ? subject : issuer, Audience = audience, SigningCredentials = credentials };
+                var handler = new JsonWebTokenHandler { SetDefaultTimesOnTokenCreation = true, TokenLifetimeInMinutes = expireMinutes };
+                string jwt = handler.CreateToken(descriptor);
                 Console.WriteLine(jwt);
             }
 

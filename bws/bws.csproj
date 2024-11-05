@@ -30,7 +30,5 @@
   <ItemGroup>
     <Protobuf Include="bws.proto" GrpcServices="Client" />
   </ItemGroup>
- 
-  <ProjectExtensions><VisualStudio><UserProperties properties_4launchsettings_1json__JsonSchema="https://json.schemastore.org/libman.json" /></VisualStudio></ProjectExtensions>
 
 </Project>

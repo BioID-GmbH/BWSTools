@@ -1,16 +1,16 @@
-﻿using System;
-using System.Collections.Generic;
-using System.CommandLine;
-using System.IO;
-using System.Linq;
-using System.Threading.Tasks;
-using BioID.Services;
+﻿using BioID.Services;
 using Google.Protobuf;
 using Grpc.Core;
 using Grpc.Health.V1;
 using Grpc.Net.Client;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
+using System;
+using System.Collections.Generic;
+using System.CommandLine;
+using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
 
 internal class Program
 {
@@ -370,7 +370,7 @@ internal class Program
             Claims = claims,
             Issuer = clientId,
             Audience = "BWS",
-            SigningCredentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha512),
+            SigningCredentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256),
         };
         var handler = new JsonWebTokenHandler
         {

@@ -8,7 +8,7 @@
     <PublishAot>true</PublishAot>
     <InvariantGlobalization>true</InvariantGlobalization>
     <AssemblyTitle>JWT Generator</AssemblyTitle>
-    <Description>BioID JWT generator mainly for use with BWS 3.0.</Description>
+    <Description>BioID JWT generator mainly for use with BWS 3.</Description>
     <Authors>BioID</Authors>
     <Company>BioID GmbH</Company>
     <Version>1.0.0-beta</Version>
