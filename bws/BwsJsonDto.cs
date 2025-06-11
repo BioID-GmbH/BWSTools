@@ -25,19 +25,6 @@ namespace Bws.Json
     }
 
     /// <summary>
-    /// The <c>VideoLivenessDetection</c> request object. See also
-    /// <seealso href="https://developer.bioid.com/bws/restful/videolivenessdetection">
-    /// RESTful JSON API VideoLivenessDetection</seealso>
-    /// </summary>
-    public class VideoLivenessDetectionRequest
-    {
-        /// <summary>
-        /// The binary input video data, base64 encoded.
-        /// </summary>
-        public string Video { get; set; } = string.Empty;
-    }
-
-    /// <summary>
     /// The <c>LivenessDetection</c> response object. See also
     /// <seealso href="https://developer.bioid.com/bws/restful/livenessdetection">
     /// RESTful JSON API LivenessDetection</seealso> or 
@@ -71,6 +58,19 @@ namespace Bws.Json
     }
 
     /// <summary>
+    /// The <c>VideoLivenessDetection</c> request object. See also
+    /// <seealso href="https://developer.bioid.com/bws/restful/videolivenessdetection">
+    /// RESTful JSON API VideoLivenessDetection</seealso>
+    /// </summary>
+    public class VideoLivenessDetectionRequest
+    {
+        /// <summary>
+        /// The binary input video data, base64 encoded.
+        /// </summary>
+        public string Video { get; set; } = string.Empty;
+    }
+
+    /// <summary>
     /// The <c>PhotoVerify</c> request object. See also
     /// <seealso href="https://developer.bioid.com/bws/grpc/photoverify">
     /// RESTful JSON API PhotoVerify</seealso>
@@ -95,8 +95,6 @@ namespace Bws.Json
         public bool DisableLivenessDetection { get; set; }
     }
 
-
-    // see https://developer.bioid.com/bws/grpc/photoverify
     /// <summary>
     /// The <c>PhotoVerify</c> response object. See also
     /// <seealso href="https://developer.bioid.com/bws/grpc/photoverify">
@@ -298,5 +296,218 @@ namespace Bws.Json
         /// The y-coordinate of the point.
         /// </summary>
         public double Y { get; set; }
+    }
+
+    //--------------------------------------------------------
+    // Face Recognition
+    //--------------------------------------------------------
+
+    /// <summary>
+    /// The <c>Enroll</c> response object. See also
+    /// <seealso href="https://developer.bioid.com/bws/restful/enroll">
+    /// JSON Web API Enroll</seealso>.
+    /// </summary>
+    public class FaceEnrollmentResponse
+    {
+        /// <summary>
+        /// The status of the BWS job that processed the request.
+        /// </summary>
+        public JobStatus Status { get; set; }
+        /// <summary>
+        /// A list of errors that might have occurred while the request has been processed.
+        /// </summary>
+        public List<JobError> Errors { get; set; } = [];
+        /// <summary>
+        /// The calculated image properties for each of the provided live images
+        /// in the given order.
+        /// </summary>
+        public List<ImageProperties> ImageProperties { get; set; } = [];
+        /// <summary>
+        /// The actual action performed.
+        /// </summary>
+        public EnrollmentAction PerformedAction { get; set; }
+        /// <summary>
+        /// Number of newly enrolled images.
+        /// </summary>
+        public int EnrolledImages { get; set; }
+        /// <summary>
+        /// The FaceTemplateStatus of the generated face template without any face thumbnails.
+        /// </summary>
+        public FaceTemplateStatus TemplateStatus { get; set; } = new();
+        /// <summary>
+        /// Possible enrollment actions.
+        /// </summary>
+        [JsonConverter(typeof(JsonStringEnumConverter<EnrollmentAction>))]
+        public enum EnrollmentAction { NONE = 0, NEW_TEMPLATE_CREATED, TEMPLATE_UPDATED, TEMPLATE_UPGRADED, ENROLLMENT_FAILED = -1 }
+    }
+
+    /// <summary>
+    /// The <c>Verify</c> response object. See also
+    /// <seealso href="https://developer.bioid.com/bws/restful/verify">
+    /// JSON Web API Verify</seealso>.
+    /// </summary>
+    public class FaceVerificationResponse
+    {
+        /// <summary>
+        /// The status of the BWS job that processed the request.
+        /// </summary>
+        public JobStatus Status { get; set; }
+        /// <summary>
+        /// A list of errors that might have occurred while the request has been processed.
+        /// </summary>
+        public List<JobError> Errors { get; set; } = [];
+        /// <summary>
+        /// The calculated image properties for the provided image.
+        /// </summary>
+        public ImageProperties ImageProperties { get; set; } = new();
+        /// <summary>
+        /// Verification decission made by BWS.
+        /// </summary>
+        public bool Verified { get; set; }
+        /// <summary>
+        /// The calculated verification score (a value between 0.0 and 1.0) that
+        /// led to the verified decision. The higher the score, the more likely
+        /// the face in the image and the template referenced by the class ID
+        /// belong to the same person.
+        /// </summary>
+        public double Score { get; set; }
+    }
+
+    /// <summary>
+    /// The <c>Search</c> request object. See also
+    /// <seealso href="https://developer.bioid.com/bws/restful/search">
+    /// JSON Web API Search</seealso>
+    /// </summary>
+    public class FaceSearchRequest
+    {
+        /// <summary>
+        /// An array of one or more base64 encoded facial images of the persons
+        /// to search for. Each image has to contain exactly a single face.
+        /// </summary>
+        public List<ImageData> Images { get; set; } = [];
+
+        /// <summary>
+        /// List of tags that need to be assigned to the biometric templates to
+        /// search. Only templates that have all of these tags applied are considered
+        /// in the search. If no tag is specified, all available templates are searched.
+        /// </summary>
+        public List<string> Tags { get; set; } = [];
+    }
+
+    /// <summary>
+    /// The <c>Search</c> request object. See also
+    /// <seealso href="https://developer.bioid.com/bws/restful/search">
+    /// JSON Web API Search</seealso>
+    /// </summary>
+    public class FaceSearchResponse
+    {
+        /// <summary>
+        /// The status of the BWS job that processed the request.
+        /// </summary>
+        public JobStatus Status { get; set; }
+        /// <summary>
+        /// A list of errors that might have occurred while the request has been processed.
+        /// </summary>
+        public List<JobError> Errors { get; set; } = [];
+        /// <summary>
+        /// The calculated image properties for each of the provided images
+        /// in the given order.
+        /// </summary>
+        public List<ImageProperties> ImageProperties { get; set; } = [];
+        /// <summary>
+        /// For each input image a <see cref="SearchResult"/> is created and
+        /// returned in the order of the provided input images
+        /// </summary>
+        public List<SearchResult> Result { get; set; } = [];
+    }
+
+    /// <summary>
+    /// Face recognition one-to-many search result.
+    /// </summary>
+    public class SearchResult
+    {
+        /// <summary>
+        /// A sorted list (by score) of <see cref="TemplateMatchResult"/>s.
+        /// </summary>
+        public List<TemplateMatchResult> Matches { get; set; } = [];
+    }
+
+    /// <summary>
+    /// A single one-to-many match result.
+    /// </summary>
+    public class TemplateMatchResult
+    {
+        /// <summary>
+        /// Class ID of the person the matched template belongs to.
+        /// </summary>
+        public long ClassId { get; set; }
+        /// <summary>
+        /// The calculated similarity score for this class in the range between
+        /// 0.0 and 1.0. The higher the score, the more likely the template
+        /// matches the calculated feature vector.
+        /// </summary>
+        public double Score { get; set; }
+    }
+
+    /// <summary>
+    /// The status of a biometric face template as managed by BWS.
+    /// </summary>
+    public class FaceTemplateStatus
+    {
+        /// <summary>
+        /// Unique class ID associated with the template.
+        /// </summary>
+        public long ClassId { get; set; }
+
+        /// <summary>
+        /// Is there a template stored for the this class?
+        /// </summary>
+        public bool Available { get; set; }
+
+        /// <summary>
+        /// When has the template been generated the last time.
+        /// </summary>
+        public string Enrolled { get; set; } = string.Empty;
+
+        /// <summary>
+        /// List of tags stored with the template.
+        /// </summary>
+        public List<string> Tags { get; set; } = [];
+
+        /// <summary>
+        /// The version of the encoder used to calculate the feature vectors for this template.
+        /// </summary>
+        public int EncoderVersion { get; set; }
+
+        /// <summary>
+        /// The number of feature vectors (created from the enrolled face images)
+        /// that have been calculated, stored and used to generate the template.
+        /// </summary>
+        public int FeatureVectors { get; set; }
+
+        /// <summary>
+        /// The number of thumbnails (created from the enrolled face images)
+        /// that have been stored with the template.
+        /// </summary>
+        public int ThumbnailsStored { get; set; }
+
+        /// <summary>
+        /// If thumbnails have been stored and they have been requested (with a
+        /// call to <c>GetTemplateStatus</c>), those are returned with this field.
+        /// </summary>
+        public List<Thumbnail> Thumbnails { get; set; } = [];
+
+        public class Thumbnail
+        {
+            /// <summary>
+            /// Timestamp when the image was enrolled.
+            /// </summary>
+            public string Enrolled { get; set; } = string.Empty;
+
+            /// <summary>
+            /// The thumbnail serialized as base64 PNG.
+            /// </summary>
+            public string Image { get; set; } = string.Empty;
+        }
     }
 }

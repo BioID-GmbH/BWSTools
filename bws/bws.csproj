@@ -15,22 +15,24 @@
   <ItemGroup>
     <None Remove="bws.proto" />
     <None Remove="bwsmessages.proto" />
+    <None Remove="facerecognition.proto" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Grpc.HealthCheck" Version="2.70.0" />
-    <PackageReference Include="Grpc.Net.Client" Version="2.70.0" />
-    <PackageReference Include="Grpc.Tools" Version="2.71.0">
+    <PackageReference Include="Grpc.HealthCheck" Version="2.71.0" />
+    <PackageReference Include="Grpc.Net.Client" Version="2.71.0" />
+    <PackageReference Include="Grpc.Tools" Version="2.72.0">
       <PrivateAssets>all</PrivateAssets>
         <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Microsoft.IdentityModel.JsonWebTokens" Version="8.8.0" />
+    <PackageReference Include="Microsoft.IdentityModel.JsonWebTokens" Version="8.12.0" />
     <PackageReference Include="System.CommandLine" Version="2.0.0-beta4.22272.1" />
   </ItemGroup>
 
   <ItemGroup>
     <Protobuf Include="bws.proto" GrpcServices="Client" />
     <Protobuf Include="bwsmessages.proto" />
+    <Protobuf Include="facerecognition.proto" GrpcServices="Client" />
   </ItemGroup>
 
 </Project>

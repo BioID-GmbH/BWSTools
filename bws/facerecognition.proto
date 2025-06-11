@@ -1,0 +1,244 @@
+// Copyright 2025 BioID GmbH.
+// Definition of the BWS 3 face recognition API.
+
+syntax = "proto3";
+
+package bioid.services.v1;
+
+option java_package = "com.bioid.services";
+option csharp_namespace = "BioID.Services";
+import "bwsmessages.proto";
+import "google/protobuf/timestamp.proto";
+
+// BioID face recognition service definition.
+service FaceRecognition {
+    // Face enrollment of a single class with one or more images.
+    // Creates, updates or upgrades biometric templates. 
+    rpc Enroll (FaceEnrollmentRequest) returns (FaceEnrollmentResponse);
+    // Performs a one-to-one comparison of the uploaded images with a stored biometric template.
+    rpc Verify (FaceVerificationRequest) returns (FaceVerificationResponse);
+    // Performs a one-to-many comparison of the uploaded images with a list of stored biometric templates.
+    rpc Search (FaceSearchRequest) returns (FaceSearchResponse);
+    // Set tags associated with an enrolled class.
+    rpc SetTemplateTags (SetTemplateTagsRequest) returns (SetTemplateTagsResponse);
+    // Fetch the status of an enrolled class.
+    rpc GetTemplateStatus (FaceTemplateStatusRequest) returns (FaceTemplateStatus);
+    // Fetch the number of enrolled classes.
+    rpc GetClassCount (GetClassCountRequest) returns (GetClassCountResponse);
+    // Delete an existing biometric template.
+    rpc DeleteTemplate (DeleteTemplateRequest) returns (DeleteTemplateResponse);
+
+    // Face Recognition extensions, currently for internal use only!
+
+    // Migrate and a classic Face Template to a new BWS 3 biometric template and upgrade it, if possible.
+    rpc Migrate (FaceMigrationRequest) returns (stream FaceMigrationResponse);
+}
+
+// Face enrollment input data.
+message FaceEnrollmentRequest {
+    // Unique class ID of the enrolled person, managed by the client.
+    int64 classId = 1;
+    // The images to enroll.
+    repeated ImageData images = 2;
+}
+
+// Face enrollment output.
+message FaceEnrollmentResponse {
+    // The return-status of the processing job.
+    JobStatus status = 1;
+    // Any error messages collected during processing.
+    repeated JobError errors = 2;
+    // Calculated image properties for each of the provided images in the given order.
+    repeated ImageProperties image_properties = 3;
+    // This field contains the actual action performed.
+    EnrollmentAction performed_action = 4;
+    // Number of newly enrolled images.
+    int32 enrolled_images = 5;
+    // The status of the created/exisitng template.
+    FaceTemplateStatus template_status = 6;
+
+    // Possible actions performed by the enrollment API.
+    enum EnrollmentAction {
+        // No action was performed. This typically happens, if no input images
+        // have been provided and there is no existing template that needs to
+        // be upgraded.
+        NONE = 0;
+        // A new template has been created from the provided input image(s).
+        NEW_TEMPLATE_CREATED = 1;
+        // An existing template has been updated. The features of the provided
+        // images have been added to the existing template to create a new
+        // template.
+        TEMPLATE_UPDATED = 2;
+        // A new template has been created from the provided input images and
+        // the enrollment images of an existing old version template, i.e. an
+        // existing template has been upgraded to the current encoder version.
+        TEMPLATE_UPGRADED = 3;
+        // TODO: new feature
+        TEMPLATE_IMPORTED = 4;
+        // The enrollment process generated some errors (see the <c>error</c>
+        // field) and no action was performed.
+        ENROLLMENT_FAILED = -1;
+    }
+}
+
+// Face verification request input data.
+message FaceVerificationRequest {
+    // Unique class ID of the person to verify.
+    int64 classId = 1;
+    // The image to verify.
+    ImageData image = 2;
+}
+
+// Face verification response.
+message FaceVerificationResponse { 
+    // The return-status of the processing job.
+    JobStatus status = 1;
+    // Any error messages collected during processing.
+    repeated JobError errors = 2;
+    // Calculated image properties for the provided input image.
+    ImageProperties image_properties = 3;
+    // The verification decision.
+    bool verified = 4;
+    // The calculated verification score that led to the decision.
+    double score = 5;
+}
+
+// Face one-to-many search request input data.
+message FaceSearchRequest {
+    // The images of the persons to search for.
+    repeated ImageData images = 1;
+    // List of tags that need to be assigned to the template to search.
+    // Only templates that have all of these tags applied are considered in the search.
+    repeated string tags = 2;
+    // By default only a list of identified classes is returned.
+    // Optionally a list of the top N best matches can be delivered,
+    // if this property is set to true.
+    bool top_matches = 3;
+}
+
+// Face search response.
+message FaceSearchResponse { 
+    // The return-status of the processing job.
+    JobStatus status = 1;
+    // Any error messages collected during processing.
+    repeated JobError errors = 2;
+    // Calculated image properties for each of the provided images in the given order.
+    repeated ImageProperties image_properties = 3;
+    // Search result for each of the provided images in the given order.
+    repeated SearchResult result = 4;
+
+    // A list of matched classes with their scores.
+    message SearchResult {
+        // sorted list of matches
+        repeated TemplateMatchResult matches = 1;
+    }
+
+    // A single template match result.
+    message TemplateMatchResult {
+        // Class ID of the person the template belongs to.
+        int64 classId = 1;
+        // The calculated similarity score in the range ]0.0, 1.0].
+        double score = 2;
+    }
+}
+
+// Each template can be associated with tags, so templates of various classes can be grouped.
+message SetTemplateTagsRequest {
+    // Unique class ID of the addressed template.
+    int64 classId = 1;
+    // List of tags to associate with the template.
+    repeated string tags = 2;
+}
+
+// Response of the SetTemplateTags method, currently empty.
+message SetTemplateTagsResponse { }
+
+// Request some info about a BWS managed face template.
+message FaceTemplateStatusRequest {
+    // Unique class ID of the requested template.
+    int64 classId = 1;
+    // Set this flag to true, when the stored thumbnails shall be downloaded
+    // together with the template status.
+    bool download_thumbnails = 2;
+}
+
+// The status of a template managed by BWS.
+message FaceTemplateStatus {
+    // Unique class ID associated with the template.
+    int64 classId = 1;
+    // Is there a template stored for the this class?
+    bool available = 2;
+    // If so, when has it been enrolled.
+    google.protobuf.Timestamp enrolled = 3;
+    // List of tags stored with the template.
+    repeated string tags = 4;
+    // The version of the encoder used to calculate the feature vectors for this template.
+    int32 encoder_version = 5;
+    // How many feature vectors (created from the enrolled face images) have
+    // been used to generate the template?
+    int32 feature_vectors = 6;
+    // How many thumbnails (created from the enrolled face images) have been saved?
+    // The thumbnails are required to upgrade the template to a newer feature version.
+    int32 thumbnails_stored = 7;
+    // Optional list of stored thumbnails (if requested).
+    repeated Thumbnail thumbnails = 8;
+
+    // Stored thumbnail of an enrolled image.
+    message Thumbnail {
+        // Timestamp when the image was enrolled.
+        google.protobuf.Timestamp enrolled = 1;
+        // The thumbnail serialized as PNG.
+        bytes image = 2;
+    }
+}
+
+// Get class-count request parameters.
+message GetClassCountRequest { 
+    // Optional list of tags that need to be assigned to the templates to count.
+    repeated string tags = 1;
+}
+
+// Get class-count response. 
+message GetClassCountResponse {
+    // The counted number of classes.
+    int64 number_of_classes = 1; 
+}
+
+// DeleteTemplate request parameters. 
+message DeleteTemplateRequest {
+    // Unique class ID of the biometric template to delete.
+    int64 classId = 1;
+}
+
+// DeleteTemplate response, currently empty.
+message DeleteTemplateResponse { }
+
+
+// Face Recognition extensions, currently for internal use only!
+
+message FaceMigrationRequest {
+    string storage = 1;
+    int32 partition = 2;
+}
+
+message FaceMigrationResponse {
+    string bcid = 1;
+    MigrationAction action = 2;
+    int32 total = 3;
+    int32 skipped = 4;
+    int32 migrated = 5;
+    int32 upgraded = 6;
+
+    enum MigrationAction {
+        // already migrated
+        SKIPPED = 0;
+        // migrated (but not upgraded due to no images)
+        MIGRATED = 1;
+        // migrated and upgraded
+        UPGRADED = 2;
+        // migrate failed due to missing classic features
+        MIGRATE_FAILED = 3;
+        // migrated, upgrade failed due to an error
+        UPGRADE_FAILED = 4;
+    }
+}

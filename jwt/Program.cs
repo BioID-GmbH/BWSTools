@@ -42,7 +42,7 @@ namespace BioID.JwtGenerator
                 Console.WriteLine(jwt);
             }
 
-            catch(Exception ex) 
+            catch (Exception ex)
             {
                 Console.ForegroundColor = ConsoleColor.Red;
                 Console.Error.WriteLine($"Error: {ex.Message}");

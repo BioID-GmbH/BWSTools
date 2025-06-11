@@ -20,6 +20,8 @@ namespace Bws
             var verbosityOption = new Option<Verbosity>(aliases: ["--verbosity", "-v"], description: "The output verbosity mode.", getDefaultValue: () => Verbosity.Normal);
             var restApiOption = new Option<bool>(["--rest", "-r"], "Use RESTful API calls.");
             var deadlineOption = new Option<int>(["--deadline", "-d"], "An optional deadline for the call in milliseconds.");
+            var classOption = new Option<long>(["--classid", "-i"], "A unique class ID of the person associated with a template.");
+            var tagsOption = new Option<string[]>("--tags", "Tags associated with a biometric template.") { AllowMultipleArgumentsPerToken = true };
 
             // define available sub-commands
             var livedetectCommand = new Command("livedetect", "Call into the LivenessDetection API, requires one (passive live detection) or two (active live detection) live images.")
@@ -38,6 +40,34 @@ namespace Bws
             {
                 hostOption, restApiOption, verbosityOption
             };
+            var enrollmentCommand = new Command("enroll", "Call into the FaceEnrollment API, requires one or more images.")
+            {
+                hostOption, clientOption, keyOption, restApiOption, deadlineOption, verbosityOption, filesArgument, classOption
+            };
+            var verifyCommand = new Command("verify", "Call into the FaceVerification API, requires exactly one image.")
+            {
+                hostOption, clientOption, keyOption, restApiOption, deadlineOption, verbosityOption, filesArgument, classOption
+            };
+            var searchCommand = new Command("search", "Call into the Face Search API, requires one or more images.")
+            {
+                hostOption, clientOption, keyOption, restApiOption, deadlineOption, verbosityOption, filesArgument, tagsOption
+            };
+            var setTagsCommand = new Command("settags", "Associate tags with a biometric template.")
+            {
+                hostOption, clientOption, keyOption, restApiOption, deadlineOption, verbosityOption, classOption, tagsOption
+            };
+            var getTemplateCommand = new Command("gettemplate", "Fetch the status of a biometric template (together with enrolled thumbs, if available).")
+            {
+                hostOption, clientOption, keyOption, restApiOption, deadlineOption, verbosityOption, classOption
+            };
+            var getClassCountCommand = new Command("classcount", "Fetch the number of enrolled classes.")
+            {
+                hostOption, clientOption, keyOption, restApiOption, verbosityOption, tagsOption
+            };
+            var deleteTemplateCommand = new Command("deletetemplate", "Delete a biometric template.")
+            {
+                hostOption, clientOption, keyOption, restApiOption, deadlineOption, verbosityOption, classOption
+            };
 
             // set the command handlers for our APIs
             var cb = new ConnectionBinder(hostOption, clientOption, keyOption, restApiOption, deadlineOption);
@@ -45,12 +75,26 @@ namespace Bws
             videoLivedetectCommand.SetHandler(VideoLiveDetectionAsync, cb, filesArgument, verbosityOption);
             photoVerifyCommand.SetHandler(PhotoVerifyAsync, cb, filesArgument, photoOption, disableliveOption, challengeOption, verbosityOption);
             healthCheckCommand.SetHandler(HealthCheckAsync, hostOption, restApiOption, verbosityOption);
+            enrollmentCommand.SetHandler(FaceEnrollmentAsync, cb, filesArgument, classOption, verbosityOption);
+            verifyCommand.SetHandler(FaceVerificationAsync, cb, filesArgument, classOption, verbosityOption);
+            searchCommand.SetHandler(FaceSearchAsync, cb, filesArgument, tagsOption, verbosityOption);
+            setTagsCommand.SetHandler(SetTagsAsync, cb, classOption, tagsOption, verbosityOption);
+            getTemplateCommand.SetHandler(GetTemplateStatusAsync, cb, classOption, verbosityOption);
+            getClassCountCommand.SetHandler(GetClassCountAsync, cb, tagsOption, verbosityOption);
+            deleteTemplateCommand.SetHandler(DeleteTemplateAsync, cb, classOption, verbosityOption);
 
             var rootCommand = new RootCommand("BWS 3 command-line interface.");
             rootCommand.AddCommand(livedetectCommand);
             rootCommand.AddCommand(videoLivedetectCommand);
             rootCommand.AddCommand(photoVerifyCommand);
             rootCommand.AddCommand(healthCheckCommand);
+            rootCommand.AddCommand(enrollmentCommand);
+            rootCommand.AddCommand(verifyCommand);
+            rootCommand.AddCommand(searchCommand);
+            rootCommand.AddCommand(setTagsCommand);
+            rootCommand.AddCommand(getTemplateCommand);
+            rootCommand.AddCommand(getClassCountCommand);
+            rootCommand.AddCommand(deleteTemplateCommand);
 
             return await rootCommand.InvokeAsync(args);
         }
@@ -86,7 +130,65 @@ namespace Bws
                     ? await BwsRest.PhotoVerifyAsync(connection, files, photo, disableLive, tag, verbosity).ConfigureAwait(false)
                     : await BwsGrpc.PhotoVerifyAsync(connection, files, photo, disableLive, tag, verbosity).ConfigureAwait(false);
         }
+
+        // Call Enroll API, see https://developer.bioid.com/bws/face/enroll 
+        internal static async Task<int> FaceEnrollmentAsync(Connection connection, FileInfo[] files, long classId, Verbosity verbosity)
+        {
+            return connection.RestApi
+                ? await BwsRest.FaceEnrollmentAsync(connection, files, classId, verbosity).ConfigureAwait(false)
+                : await BwsGrpc.FaceEnrollmentAsync(connection, files, classId, verbosity).ConfigureAwait(false);
+        }
+
+        // Call Verify API, see https://developer.bioid.com/bws/face/verify
+        internal static async Task<int> FaceVerificationAsync(Connection connection, FileInfo[] files, long classId, Verbosity verbosity)
+        {
+            return connection.RestApi
+                ? await BwsRest.FaceVerificationAsync(connection, files, classId, verbosity).ConfigureAwait(false)
+                : await BwsGrpc.FaceVerificationAsync(connection, files, classId, verbosity).ConfigureAwait(false);
+        }
+
+        // Call Search API, see https://developer.bioid.com/bws/face/search
+        internal static async Task<int> FaceSearchAsync(Connection connection, FileInfo[] files, string[] tags, Verbosity verbosity)
+        {
+            return connection.RestApi
+                ? await BwsRest.FaceSearchAsync(connection, files, tags, verbosity).ConfigureAwait(false)
+                : await BwsGrpc.FaceSearchAsync(connection, files, tags, verbosity).ConfigureAwait(false);
+        }
+
+        // Call SetTemplateTags API, see https://developer.bioid.com/bws/face/settemplatetags
+        internal static async Task<int> SetTagsAsync(Connection connection, long classId, string[] tags, Verbosity verbosity)
+        {
+            return connection.RestApi
+                ? await BwsRest.SetTagsAsync(connection, classId, tags, verbosity).ConfigureAwait(false)
+                : await BwsGrpc.SetTagsAsync(connection, classId, tags, verbosity).ConfigureAwait(false);
+        }
+
+        // Call GetTemplateStatus API, see https://developer.bioid.com/bws/face/gettemplatestatus
+        internal static async Task<int> GetTemplateStatusAsync(Connection connection, long classId, Verbosity verbosity)
+        {
+            return connection.RestApi
+                ? await BwsRest.GetTemplateStatusAsync(connection, classId, verbosity).ConfigureAwait(false)
+                : await BwsGrpc.GetTemplateStatusAsync(connection, classId, verbosity).ConfigureAwait(false);
+        }
+
+        // Call GetClassCount API, see https://developer.bioid.com/bws/face/getclasscount
+        internal static async Task<int> GetClassCountAsync(Connection connection, string[] tags, Verbosity verbosity)
+        {
+            return connection.RestApi
+                ? await BwsRest.GetClassCountAsync(connection, tags, verbosity).ConfigureAwait(false)
+                : await BwsGrpc.GetClassCountAsync(connection, tags, verbosity).ConfigureAwait(false);
+        }
+
+        // Call DeleteTemplate API, see https://developer.bioid.com/bws/face/deletetemplate
+        internal static async Task<int> DeleteTemplateAsync(Connection connection, long classId, Verbosity verbosity)
+        {
+            return connection.RestApi
+                ? await BwsRest.DeleteTemplateAsync(connection, classId, verbosity).ConfigureAwait(false)
+                : await BwsGrpc.DeleteTemplateAsync(connection, classId, verbosity).ConfigureAwait(false);
+        }
+
     }
+
     /// <summary>
     /// Represents various levels of detail for message output in the console.
     /// </summary>

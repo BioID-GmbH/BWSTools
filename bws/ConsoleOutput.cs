@@ -4,6 +4,7 @@ using System.Linq;
 using System.Net.Http.Headers;
 using BioID.Services;
 using Grpc.Core;
+using static Grpc.Core.Metadata;
 
 namespace Bws
 {
@@ -104,6 +105,19 @@ namespace Bws
         public static void DumpImageProperties(IEnumerable<ImageProperties> imageProperties)
         {
             foreach (ImageProperties properties in imageProperties) { Console.WriteLine($"ImageProperties: {properties}"); }
+        }
+
+
+        /// <summary>
+        /// Outputs a collection of template search results to the console.
+        /// </summary>
+        /// <param name="matchResults">A collection of one-to-many face recognition search results.</param>
+        public static void DumpTemplateMatches(IEnumerable<Json.SearchResult> matchResults)
+        {
+            foreach (var match in matchResults.SelectMany(matches => matches.Matches))
+            {
+                Console.WriteLine($"Match: [ClassId: {match.ClassId}] - [Score: {match.Score}]");
+            }
         }
     }
 }

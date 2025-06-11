@@ -1,5 +1,5 @@
-// Copyright 2024 BioID GmbH.
-// Definition of messages used with the BWS 3 API.
+// Copyright 2025 BioID GmbH.
+// Definition of messages as used in various BWS 3 APIs.
 
 syntax = "proto3";
 
@@ -41,6 +41,12 @@ message Face {
 message PointD {
     double x = 1;
     double y = 2;
+}
+message RectangleD {
+    double x = 1;
+    double y = 2;
+    double width = 3;
+    double height = 4;
 }
 
 // Informational messages collected with BWS jobs during processing of an image to give feedback to users.
