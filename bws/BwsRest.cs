@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Json;
 using System.Text.Json;
@@ -138,10 +137,10 @@ namespace Bws
         /// Performs videolivenessdetection for a video file.
         /// </summary>
         /// <param name="connection">The connection parameters for the BWS RESTful API.</param>
-        /// <param name="files">The input video file for video liveness detection.</param>
+        /// <param name="video">The input video file for video liveness detection.</param>
         /// <param name="verbosity">Specifies the verbosity level for logging the results.</param>
         /// <returns>Returns 0 on success, or 1 if an exception occurs.</returns>
-        internal static async Task<int> VideoLiveDetectionAsync(Connection connection, FileInfo[] files, Verbosity verbosity)
+        internal static async Task<int> VideoLiveDetectionAsync(Connection connection, FileInfo video, Verbosity verbosity)
         {
             try
             {
@@ -151,7 +150,7 @@ namespace Bws
                 if (verbosity > Verbosity.Quiet) { Console.WriteLine($"Calling {url} at {connection.Host} ..."); }
 
                 // Build the request payload with the video file.
-                var request = new Json.VideoLivenessDetectionRequest { Video = Convert.ToBase64String(File.ReadAllBytes(files.First().FullName)) };
+                var request = new Json.VideoLivenessDetectionRequest { Video = Convert.ToBase64String(File.ReadAllBytes(video.FullName)) };
 
                 // Call BWS
                 // Send the POST request to the API and handle the response.
@@ -369,11 +368,11 @@ namespace Bws
         /// to verify whether the individual is the person they claim to be.
         /// </summary>
         /// <param name="connection">The connection parameters for the BWS RESTful API.</param>
-        /// <param name="files">An input image that is used for the verification.</param>
+        /// <param name="file">An input image that is used for the verification.</param>
         /// <param name="classId">A unique class ID of the person associated with the biometric template.</param>
         /// <param name="verbosity">Specifies the verbosity level for logging the results.</param>
         /// <returns>Returns 0 on success, or 1 if an exception occurs.</returns>
-        internal static async Task<int> FaceVerificationAsync(Connection connection, FileInfo[] files, long classId, Verbosity verbosity)
+        internal static async Task<int> FaceVerificationAsync(Connection connection, FileInfo file, long classId, Verbosity verbosity)
         {
             try
             {
@@ -383,7 +382,7 @@ namespace Bws
                 if (verbosity > Verbosity.Quiet) { Console.WriteLine($"Calling POST {url} at {connection.Host} ..."); }
 
                 // create request
-                var verifyRequest = new Json.ImageData { Image = Convert.ToBase64String(File.ReadAllBytes(files[0].FullName)) };
+                var verifyRequest = new Json.ImageData { Image = Convert.ToBase64String(File.ReadAllBytes(file.FullName)) };
 
                 // call BWS
                 var response = await httpClient.PostAsync(url, JsonContent.Create(verifyRequest, FaceVerifyRequestContext.Default.ImageData)).ConfigureAwait(false);
@@ -580,49 +579,6 @@ namespace Bws
                         if (responseContent != null) { Console.WriteLine(responseContent); }
                         if (verbosity >= Verbosity.Normal) { ConsoleOutput.DumpHeaders(response.Headers, "Response Headers"); }
                     }
-                }
-            }
-            catch (Exception ex)
-            {
-                ConsoleOutput.WriteError($"BWS RESTful web API call failed: {ex.Message}");
-                return 1;
-            }
-            return 0;
-        }
-
-        /// <summary>
-        /// Fetches the number of enrolled classes. The counted classes can be restricted to those 
-        /// that have specific tags assigned.
-        /// </summary>
-        /// <param name="connection">The connection parameters for the BWS RESTful API.</param>
-        /// <param name="tags">An optional array of tags to consider when counting classes. If no tags are specified, all classes are counted.</param>
-        /// <param name="verbosity">Specifies the verbosity level for logging the results.</param>
-        /// <returns>Returns 0 on success, or 1 if an exception occurs.</returns>
-        internal static async Task<int> GetClassCountAsync(Connection connection, string[] tags, Verbosity verbosity)
-        {
-            try
-            {
-                // create the HTTP client
-                using HttpClient httpClient = Authentication.CreateAuthenticatedClient(new Uri(connection.Host), Authentication.GenerateToken(connection.ClientId, connection.Key));
-                string url = "/api/face/v1/classcount";
-                bool added = false;
-                foreach (var tag in tags)
-                {
-                    url = added ? $"{url}&tags={tag}" : $"{url}?tags={tag}";
-                    added = true;
-                }
-                if (verbosity > Verbosity.Quiet) { Console.WriteLine($"Calling GET {url} at {connection.Host} ..."); }
-
-                // call BWS
-                var response = await httpClient.GetAsync(url).ConfigureAwait(false);
-
-                // handle response
-                if (verbosity >= Verbosity.Minimal)
-                {
-                    var responseContent = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-                    Console.WriteLine($"Server response: {response.StatusCode}");
-                    if (responseContent != null) { Console.WriteLine(responseContent); }
-                    if (verbosity >= Verbosity.Normal) { ConsoleOutput.DumpHeaders(response.Headers, "Response Headers"); }
                 }
             }
             catch (Exception ex)

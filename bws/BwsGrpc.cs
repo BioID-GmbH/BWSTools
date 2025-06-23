@@ -1,12 +1,11 @@
-﻿using BioID.Services;
+﻿using System;
+using System.IO;
+using System.Threading.Tasks;
+using BioID.Services;
 using Google.Protobuf;
 using Grpc.Core;
 using Grpc.Health.V1;
 using Grpc.Net.Client;
-using System;
-using System.IO;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace Bws
 {
@@ -148,10 +147,10 @@ namespace Bws
         /// Performs videolivenessdetection for a video file.
         /// </summary>
         /// <param name="connection">Connection parameters including host and authentication credentials.</param>
-        /// <param name="files">The input video file for video liveness detection.</param>
+        /// <param name="video">The input video file for video liveness detection.</param>
         /// <param name="verbosity">The verbosity level for output.</param>
         /// <returns>An integer indicating success (0) or failure (1).</returns>
-        internal static async Task<int> VideoLiveDetectionAsync(Connection connection, FileInfo[] files, Verbosity verbosity)
+        internal static async Task<int> VideoLiveDetectionAsync(Connection connection, FileInfo video, Verbosity verbosity)
         {
             try
             {
@@ -163,7 +162,7 @@ namespace Bws
                 // Create BWS client
                 var client = new BioIDWebService.BioIDWebServiceClient(channel);
                 // Create videolivenessdetetction request
-                var request = new VideoLivenessDetectionRequest { Video = ByteString.CopyFrom(File.ReadAllBytes(files.First().FullName)) };
+                var request = new VideoLivenessDetectionRequest { Video = ByteString.CopyFrom(File.ReadAllBytes(video.FullName)) };
 
                 // Set deadline timeout for the connection to the server.
                 DateTime? deadline = connection.Deadline <= 0 ? null : DateTime.UtcNow.AddMilliseconds(connection.Deadline);
@@ -362,11 +361,11 @@ namespace Bws
         /// to verify whether the individual is the person they claim to be.
         /// </summary>
         /// <param name="connection">Connection parameters including host and authentication credentials.</param>
-        /// <param name="files">An input image that is used for the verification.</param>
+        /// <param name="file">An input image that is used for the verification.</param>
         /// <param name="classId">A unique class ID of the person associated with the biometric template.</param>
         /// <param name="verbosity">Specifies the verbosity level for logging the results.</param>
         /// <returns>An integer indicating success (0) or failure (1).</returns>
-        internal static async Task<int> FaceVerificationAsync(Connection connection, FileInfo[] files, long classId, Verbosity verbosity)
+        internal static async Task<int> FaceVerificationAsync(Connection connection, FileInfo file, long classId, Verbosity verbosity)
         {
             try
             {
@@ -378,7 +377,7 @@ namespace Bws
                 // creates request
                 var request = new FaceVerificationRequest
                 {
-                    Image = new ImageData { Image = ByteString.CopyFrom(File.ReadAllBytes(files[0].FullName)) },
+                    Image = new ImageData { Image = ByteString.CopyFrom(File.ReadAllBytes(file.FullName)) },
                     ClassId = classId
                 };
 
@@ -590,53 +589,6 @@ namespace Bws
         }
 
         /// <summary>
-        /// Fetches the number of enrolled classes. The counted classes can be restricted to those 
-        /// that have specific tags assigned.
-        /// </summary>
-        /// <param name="connection">Connection parameters including host and authentication credentials.</param>
-        /// <param name="tags">An optional array of tags to consider when counting classes. If no tags are specified, all classes are counted.</param>
-        /// <param name="verbosity">Specifies the verbosity level for logging the results.</param>
-        /// <returns>Returns 0 on success, or 1 if an exception occurs.</returns>
-        internal static async Task<int> GetClassCountAsync(Connection connection, string[] tags, Verbosity verbosity)
-        {
-            try
-            {
-                // create the gRPC channel
-                using GrpcChannel channel = Authentication.CreateAuthenticatedChannel(new Uri(connection.Host), Authentication.GenerateToken(connection.ClientId, connection.Key));
-                if (verbosity > Verbosity.Quiet) { Console.WriteLine($"Calling GetClassCount at {channel.Target}..."); }
-                var client = new FaceRecognition.FaceRecognitionClient(channel);
-                var request = new GetClassCountRequest();
-                request.Tags.AddRange(tags);
-                // call BWS
-                using var call = client.GetClassCountAsync(request);
-                GetClassCountResponse response = await call.ResponseAsync.ConfigureAwait(false);
-                // output
-                if (verbosity >= Verbosity.Minimal)
-                {
-                    Console.WriteLine($"Server response: {call.GetStatus()}");
-                    Console.WriteLine($"The counted number of classes: {response.NumberOfClasses}");
-                }
-                if (verbosity >= Verbosity.Diagnostic)
-                {
-                    ConsoleOutput.DumpMetadata(await call.ResponseHeadersAsync.ConfigureAwait(false), "Response Headers");
-                    ConsoleOutput.DumpMetadata(call.GetTrailers(), "Response Trailers");
-                }
-                return 0;
-            }
-            catch (RpcException ex)
-            {
-                ConsoleOutput.WriteError($"gRPC error from calling service: {ex.Status.StatusCode} - '{ex.Status.Detail}'");
-                if (verbosity > Verbosity.Minimal) { ConsoleOutput.DumpMetadata(ex.Trailers, "Response Trailers"); }
-                return 1;
-            }
-            catch
-            {
-                ConsoleOutput.WriteError("Unexpected error calling service.");
-                throw;
-            }
-        }
-
-        /// <summary>
         /// Deletes all information associated with the provided class ID, including the biometric face templates 
         /// and any associated tags. This operation permanently removes the data from the system.
         /// </summary>
@@ -683,6 +635,5 @@ namespace Bws
                 throw;
             }
         }
-
     }
 }

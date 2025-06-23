@@ -23,15 +23,8 @@ service FaceRecognition {
     rpc SetTemplateTags (SetTemplateTagsRequest) returns (SetTemplateTagsResponse);
     // Fetch the status of an enrolled class.
     rpc GetTemplateStatus (FaceTemplateStatusRequest) returns (FaceTemplateStatus);
-    // Fetch the number of enrolled classes.
-    rpc GetClassCount (GetClassCountRequest) returns (GetClassCountResponse);
     // Delete an existing biometric template.
     rpc DeleteTemplate (DeleteTemplateRequest) returns (DeleteTemplateResponse);
-
-    // Face Recognition extensions, currently for internal use only!
-
-    // Migrate and a classic Face Template to a new BWS 3 biometric template and upgrade it, if possible.
-    rpc Migrate (FaceMigrationRequest) returns (stream FaceMigrationResponse);
 }
 
 // Face enrollment input data.
@@ -192,18 +185,6 @@ message FaceTemplateStatus {
     }
 }
 
-// Get class-count request parameters.
-message GetClassCountRequest { 
-    // Optional list of tags that need to be assigned to the templates to count.
-    repeated string tags = 1;
-}
-
-// Get class-count response. 
-message GetClassCountResponse {
-    // The counted number of classes.
-    int64 number_of_classes = 1; 
-}
-
 // DeleteTemplate request parameters. 
 message DeleteTemplateRequest {
     // Unique class ID of the biometric template to delete.
@@ -212,33 +193,3 @@ message DeleteTemplateRequest {
 
 // DeleteTemplate response, currently empty.
 message DeleteTemplateResponse { }
-
-
-// Face Recognition extensions, currently for internal use only!
-
-message FaceMigrationRequest {
-    string storage = 1;
-    int32 partition = 2;
-}
-
-message FaceMigrationResponse {
-    string bcid = 1;
-    MigrationAction action = 2;
-    int32 total = 3;
-    int32 skipped = 4;
-    int32 migrated = 5;
-    int32 upgraded = 6;
-
-    enum MigrationAction {
-        // already migrated
-        SKIPPED = 0;
-        // migrated (but not upgraded due to no images)
-        MIGRATED = 1;
-        // migrated and upgraded
-        UPGRADED = 2;
-        // migrate failed due to missing classic features
-        MIGRATE_FAILED = 3;
-        // migrated, upgrade failed due to an error
-        UPGRADE_FAILED = 4;
-    }
-}

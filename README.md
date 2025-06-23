@@ -20,7 +20,6 @@ BWSTools is a command-line tool for interacting with the **BioID Web Service 3 (
       - [search](#search)
       - [settags](#settags)
       - [gettemplate](#gettemplate)
-      - [classcount](#classcount)
       - [deletetemplate](#deletetemplate)      
 - [JWT Tool](#jwt)
 
@@ -38,15 +37,15 @@ The general syntax for running the bws cli tool is:
 ```bash
 bws [command] [options]
 ```
-#### 📚 Commands
+<h4 id="commands">📚 Commands</h4>
 The CLI tool supports the following commands:
 
 - **`healthcheck`**: Call the health check API. The HealthCheck API provides real-time health status of the BWS service API.
 
-    | Options           | Description               | Required |
-    |-------------------|---------------------------|----------|
-    | `--host`          | URL of the BWS to call    | ✅ Yes      |
-    | `--rest` `-r`     | Use RESTful API calls     | ❌ No       |
+    | Options           | Description                                | Required |
+    |-------------------|--------------------------------------------|----------|
+    | `--host`          | URL of the BWS to call                     | ✅ Yes      |
+    | `--rest` `-r`     | Use RESTful API call (instead of gRPC)     | ❌ No       |
     | `--verbosity` `-v`| The output verbosity mode [default: Normal] (Detailed, Diagnostic, Minimal, Normal, Quiet) | ❌ No       |
 
     Examples:
@@ -73,9 +72,9 @@ The CLI tool supports the following commands:
     | `--host`          | URL of the BWS to call                                                   | ✅ Yes      |
     | `--clientid`      | Your BWS Client Identifier                                               | ✅ Yes      |
     | `--key`           | Your base64 encoded signing key                                          | ✅ Yes      |
-    | `--rest` `-r`     | Use RESTful API calls                                                    | ❌ No      |
-    | `--deadline` `-d` | Optional deadline for the call timeout (in milliseconds)                 | ❌ No      |
     | `--challenge`     | Optional head motion direction for the challenge response liveness detection mode (right, left, up, down). Requires two live images  | ❌ No       |
+    | `--rest` `-r`     | Use RESTful API call (instead of gRPC)                                   | ❌ No       |
+    | `--deadline` `-d` | Optional deadline for the call in milliseconds (gRPC only)               | ❌ No       |
     | `--verbosity` `-v`| The output verbosity mode [default: Normal] (Detailed, Diagnostic, Minimal, Normal, Quiet) | ❌ No       |
 
       Examples:
@@ -89,19 +88,20 @@ The CLI tool supports the following commands:
     ```
 ---
 - <h4 id="videolivedetect">videolivedetect</h4>
+
     Call the VideoLivenessDetection API to analyze a video file and detect if the content contains a live subject.
 
     | Arguments       | Description                                                                       |
     |-----------------|-----------------------------------------------------------------------------------|
-    | `files`         | video file to process
+    | `video`         | video file to process
    
     | Options           | Description                                                          | Required |
     |-------------------|----------------------------------------------------------------------|----------|
     | `--host`          | URL of the BWS to call                                               | ✅ Yes      |
     | `--clientid`      | Your BWS Client Identifier                                           | ✅ Yes      |
     | `--key`           | Your base64 encoded signing key                                      | ✅ Yes      |
-    | `--rest` `-r`     | Use RESTful API calls                                                | ❌ No       |
-    | `--deadline` `-d` | Optional deadline for the call timeout (in milliseconds)             | ❌ No       |
+    | `--rest` `-r`     | Use RESTful API call (instead of gRPC)                               | ❌ No       |
+    | `--deadline` `-d` | Optional deadline for the call in milliseconds (gRPC only)           | ❌ No       |
     | `--verbosity` `-v`| The output verbosity mode [default: Normal] (Detailed, Diagnostic, Minimal, Normal, Quiet) | ❌ No       |
 
     Examples:
@@ -111,12 +111,12 @@ The CLI tool supports the following commands:
     ```
 ---
 - <h4 id="photoverify">photoverify</h4>
+
     Calls the PhotoVerify API, which requires one or two live images and one ID photo, to verify whether the given photo matches a specific verification criterion.
 
     | Arguments       | Description                                                                           |
     |-----------------|---------------------------------------------------------------------------------------|
     | `files`         | List of image files to process.
-
 
     | Options           | Description                                                              | Required |
     |-------------------|--------------------------------------------------------------------------|----------|
@@ -124,10 +124,10 @@ The CLI tool supports the following commands:
     | `--clientid`      | Your BWS Client Identifier                                               | ✅ Yes      |
     | `--key`           | Your base64 encoded signing key                                          | ✅ Yes      |
     | `--photo`         | ID photo input file                                                      | ✅ Yes      |
-    | `--rest` `-r`     | Use RESTful API calls                                                    | ❌ No       |
-    | `--deadline` `-d` | Optional deadline for the call timeout (in milliseconds)                 | ❌ No       |
     | `--disablelive`   | Disable liveness detection with PhotoVerify API                          | ❌ No       |
     | `--challenge`     | Optional head motion direction for the challenge response liveness detection mode (right, left, up, down). Requires two live images  | ❌ No       |
+    | `--rest` `-r`     | Use RESTful API call (instead of gRPC)                                   | ❌ No       |
+    | `--deadline` `-d` | Optional deadline for the call in milliseconds (gRPC only)               | ❌ No       |
     | `--verbosity` `-v`| The output verbosity mode [default: Normal] (Detailed, Diagnostic, Minimal, Normal, Quiet) | ❌ No       |
 
     Examples:
@@ -137,38 +137,41 @@ The CLI tool supports the following commands:
     ```
 
 <h3 id="facerecognition">Face Recognition API (Enroll, Verify, Search, SetTemplateTags, GetTemplateStatus, GetClassCount, DeleteTemplate)</h3>
-<p>The FaceRecognition APIs, which compares the facial characteristics of a person with a stored version of those characteristics.
-It can compare against a single biometric template for user verification purposes or against multiple templates to search for a specific user within a set of persons.</p>  
+
+The FaceRecognition APIs, which compares the facial characteristics of a person with a stored version of those characteristics.
+It can compare against a single biometric template for user verification purposes or against multiple templates to search for a specific user within a set of persons.
  
 - <h4 id="enroll">enroll</h4>
-    Call into the FaceEnrollment API, requires one or more images.
+
+    Call into the FaceEnrollment API with one or more images.
 
     | Arguments       | Description                                                                           |
     |-----------------|---------------------------------------------------------------------------------------|
     | `files`         | List of image files to process.
-
 
     | Options           | Description                                                              | Required |
     |-------------------|--------------------------------------------------------------------------|----------|
     | `--host`          | URL of the BWS to call                                                   | ✅ Yes      |
     | `--clientid`      | Your BWS Client Identifier                                               | ✅ Yes      |
     | `--key`           | Your base64 encoded signing key                                          | ✅ Yes      |
-    | `--rest` `-r`     | Use RESTful API calls                                                    | ❌ No       |
-    | `--deadline` `-d` | Optional deadline for the call timeout (in milliseconds)                 | ❌ No       |
+    | `--classid` `-i`  | A unique class ID of the person associated with the biometric template   | ✅ Yes      |
+    | `--rest` `-r`     | Use RESTful API call (instead of gRPC)                                   | ❌ No       |
+    | `--deadline` `-d` | Optional deadline for the call in milliseconds (gRPC only)               | ❌ No       |
     | `--verbosity` `-v`| The output verbosity mode [default: Normal] (Detailed, Diagnostic, Minimal, Normal, Quiet) | ❌ No       |
-    | `--classid` `-i`  | A unique class ID of the person associated with the template             | ❌ No       |
 
     Examples:
     + Biometric enrollment of a single class with *diagnostic* output level via RESTful API:
     ```bash
     bws --enroll yourfilepath --host https://bwsapiendpoint -v Diagnostic -r --clientid yourbwsclientid --key yourbwssecret --classid yourclassid
     ```
+---
 - <h4 id="verify">verify</h4>
-    Call into the FaceVerification API, requires exactly one image.
+
+    Call into the FaceVerification API, providing a single image.
 
     | Arguments       | Description                                                                           |
     |-----------------|---------------------------------------------------------------------------------------|
-    | `files`         | List of image files to process.
+    | `file`          | The image file to process.
 
 
     | Options           | Description                                                              | Required |
@@ -176,18 +179,19 @@ It can compare against a single biometric template for user verification purpose
     | `--host`          | URL of the BWS to call                                                   | ✅ Yes      |
     | `--clientid`      | Your BWS Client Identifier                                               | ✅ Yes      |
     | `--key`           | Your base64 encoded signing key                                          | ✅ Yes      |
-    | `--rest` `-r`     | Use RESTful API calls                                                    | ❌ No       |
-    | `--deadline` `-d` | Optional deadline for the call timeout (in milliseconds)                 | ❌ No       |
+    | `--classid` `-i`  | A unique class ID of the person associated with the biometric template   | ✅ Yes      |
+    | `--rest` `-r`     | Use RESTful API call (instead of gRPC)                                   | ❌ No       |
+    | `--deadline` `-d` | Optional deadline for the call in milliseconds (gRPC only)               | ❌ No       |
     | `--verbosity` `-v`| The output verbosity mode [default: Normal] (Detailed, Diagnostic, Minimal, Normal, Quiet) | ❌ No       |
-    | `--classid` `-i`  | A unique class ID of the person associated with template                 | ❌ No       |
 
     Examples:
     + One-to-one comparison of the uploaded face image with *diagnostic* output level via RESTful API:
     ```bash
     bws --verify yourfilepath --host https://bwsapiendpoint -v Diagnostic -r --clientid yourbwsclientid --key yourbwssecret --classid yourclassid
     ```
-
+---
 - <h4 id="search">search</h4>
+
     Call into the Face Search API, requires one or more images.
 
     | Arguments       | Description                                                                           |
@@ -200,17 +204,19 @@ It can compare against a single biometric template for user verification purpose
     | `--host`          | URL of the BWS to call                                                   | ✅ Yes      |
     | `--clientid`      | Your BWS Client Identifier                                               | ✅ Yes      |
     | `--key`           | Your base64 encoded signing key                                          | ✅ Yes      |
-    | `--rest` `-r`     | Use RESTful API calls                                                    | ❌ No       |
-    | `--deadline` `-d` | Optional deadline for the call timeout (in milliseconds)                 | ❌ No      |
+    | `--tags`          | A list of tags associated with the biometric templates                   | ❌ No       |
+    | `--rest` `-r`     | Use RESTful API call (instead of gRPC)                                   | ❌ No       |
+    | `--deadline` `-d` | Optional deadline for the call in milliseconds (gRPC only)               | ❌ No       |
     | `--verbosity` `-v`| The output verbosity mode [default: Normal] (Detailed, Diagnostic, Minimal, Normal, Quiet) | ❌ No       |
-    | `--tags`          | A list of tags associated with a biometric template.                     | ❌ No      |
 
     Examples:
     + One-to-many comparison of the uploaded face image with *diagnostic* output level via RESTful API:
     ```bash
     bws --search yourfilepath --host https://bwsapiendpoint -v Diagnostic -r --clientid yourbwsclientid --key yourbwssecret --tags yourtags
     ```
+---
 - <h4 id="settags">settags</h4>
+ 
     Associate tags with a biometric template.
 
     | Options           | Description                                                              | Required |
@@ -218,18 +224,20 @@ It can compare against a single biometric template for user verification purpose
     | `--host`          | URL of the BWS to call                                                   | ✅ Yes      |
     | `--clientid`      | Your BWS Client Identifier                                               | ✅ Yes      |
     | `--key`           | Your base64 encoded signing key                                          | ✅ Yes      |
-    | `--rest` `-r`     | Use RESTful API calls                                                    | ❌ No       |
-    | `--deadline` `-d` | Optional deadline for the call timeout (in milliseconds)                 | ❌ No       |
+    | `--classid` `-i`  | A unique class ID of the person associated with the biometric template   | ✅ Yes      |
+    | `--tags`          | A list of tags to associate with the biometric template                  | ❌ No       |
+    | `--rest` `-r`     | Use RESTful API call (instead of gRPC)                                   | ❌ No       |
+    | `--deadline` `-d` | Optional deadline for the call in milliseconds (gRPC only)               | ❌ No       |
     | `--verbosity` `-v`| The output verbosity mode [default: Normal] (Detailed, Diagnostic, Minimal, Normal, Quiet) | ❌ No       |
-    | `--classid` `-i`  | A unique class ID of the person associated with template                 | ❌ No       |
-    | `--tags`          | A list of tags associated with a biometric template.                     | ❌ No       |
 
     Examples:
     + Set tags to template with *diagnostic* output level via RESTful API:
     ```bash
     bws --settags --host https://bwsapiendpoint -v Diagnostic -r --clientid yourbwsclientid --key yourbwssecret --classid yourclassid --tags yourtags
     ```
+---
 - <h4 id="gettemplate">gettemplate</h4>
+
     Fetch the status of a biometric template (together with enrolled thumbs, if available).
 
     | Options           | Description                                                              | Required |
@@ -237,35 +245,19 @@ It can compare against a single biometric template for user verification purpose
     | `--host`          | URL of the BWS to call                                                   | ✅ Yes      |
     | `--clientid`      | Your BWS Client Identifier                                               | ✅ Yes      |
     | `--key`           | Your base64 encoded signing key                                          | ✅ Yes      |
-    | `--rest` `-r`     | Use RESTful API calls                                                    | ❌ No       |
-    | `--deadline` `-d` | Optional deadline for the call timeout (in milliseconds)                 | ❌ No       |
+    | `--classid` `-i`  | A unique class ID of the person associated with the biometric template   | ✅ Yes      |
+    | `--rest` `-r`     | Use RESTful API call (instead of gRPC)                                   | ❌ No       |
+    | `--deadline` `-d` | Optional deadline for the call in milliseconds (gRPC only)               | ❌ No       |
     | `--verbosity` `-v`| The output verbosity mode [default: Normal] (Detailed, Diagnostic, Minimal, Normal, Quiet) | ❌ No       |
-    | `--classid` `-i`  | A unique class ID of the person associated with template                 | ❌ No       |
 
     Examples:
     + Get status of face template with *diagnostic* output level via RESTful API:
     ```bash
     bws --gettemplate --host https://bwsapiendpoint -v Diagnostic -r --clientid yourbwsclientid --key yourbwssecret --classid yourclassid
     ```
-- <h4 id="classcount">classcount</h4>
-    Fetch the number of enrolled classes.
-
-    | Options           | Description                                                              | Required |
-    |-------------------|--------------------------------------------------------------------------|----------|
-    | `--host`          | URL of the BWS to call                                                   | ✅ Yes      |
-    | `--clientid`      | Your BWS Client Identifier                                               | ✅ Yes      |
-    | `--key`           | Your base64 encoded signing key                                          | ✅ Yes      |
-    | `--rest` `-r`     | Use RESTful API calls                                                    | ❌ No       |
-    | `--verbosity` `-v`| The output verbosity mode [default: Normal] (Detailed, Diagnostic, Minimal, Normal, Quiet) | ❌ No       |
-    | `--tags`          | A list of tags associated with a biometric template.                     | ❌ No       |
-
-    Examples:
-    + Get the number of classes with *diagnostic* output level via RESTful API:
-    ```bash
-    bws --classcount --host https://bwsapiendpoint -v Diagnostic -r --clientid yourbwsclientid --key yourbwssecret --tags yourtags
-    ```
-
+---
 - <h4 id="deletetemplate">deletetemplate</h4>
+
     Delete a biometric template.
 
     | Options           | Description                                                              | Required |
@@ -273,10 +265,10 @@ It can compare against a single biometric template for user verification purpose
     | `--host`          | URL of the BWS to call                                                   | ✅ Yes      |
     | `--clientid`      | Your BWS Client Identifier                                               | ✅ Yes      |
     | `--key`           | Your base64 encoded signing key                                          | ✅ Yes      |
-    | `--rest` `-r`     | Use RESTful API calls                                                    | ❌ No       |
-    | `--deadline` `-d` | Optional deadline for the call timeout (in milliseconds)                 | ❌ No       |
+    | `--classid` `-i`  | A unique class ID of the person associated with the biometric template   | ✅ Yes      |
+    | `--rest` `-r`     | Use RESTful API call (instead of gRPC)                                   | ❌ No       |
+    | `--deadline` `-d` | Optional deadline for the call in milliseconds (gRPC only)               | ❌ No       |
     | `--verbosity` `-v`| The output verbosity mode [default: Normal] (Detailed, Diagnostic, Minimal, Normal, Quiet) | ❌ No       |
-    | `--classid` `-i`  | A unique class ID of the person associated with template                 | ❌ No       |
 
     Examples:
     + Deletes all information associated with the provided class ID:
