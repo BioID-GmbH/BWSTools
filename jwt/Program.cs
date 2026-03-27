@@ -1,7 +1,6 @@
-﻿using Microsoft.IdentityModel.JsonWebTokens;
+﻿using System.CommandLine;
+using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
-using System.CommandLine;
-using System.CommandLine.Parsing;
 
 namespace BioID.JwtGenerator
 {
@@ -10,26 +9,36 @@ namespace BioID.JwtGenerator
         static async Task<int> Main(string[] args)
         {
             // define possible options and arguments
-            var subOption = new Option<string>("--sub", "The subject of the generated JWT (your BWS client ID or your email, ...).") { IsRequired = true }; subOption.AddAlias("-s");
-            var keyOption = new Option<string>("--key", "A base64 encoded signing key. Should have a length of at least 64 bytes.") { IsRequired = true }; keyOption.AddAlias("-k");
-            var expiryOption = new Option<int>("--expiry", "The expiration time of the generated token in minutes."); expiryOption.SetDefaultValue(5);
-            var issOption = new Option<string>("--iss", "The issuer of the generated JWT. Defaults to the subject.");
-            var audOption = new Option<string>("--aud", "The audience for the generated token."); audOption.SetDefaultValue("BWS");
-            var algOption = new Option<string>("--alg", "The cryptographic algorithm used for the JWS, see https://datatracker.ietf.org/doc/html/rfc7518#section-3");
-            algOption.SetDefaultValue(SecurityAlgorithms.HmacSha256);
+            var subOption = new Option<string>("--sub", "-s") { Description = "The subject of the generated JWT (your BWS client ID or your email, ...).",  Required = true };
+            var keyOption = new Option<string>("--key", "-k") { Description = "A base64 encoded signing key. Should have a length of at least 64 bytes.", Required = true }; 
+            var expiryOption = new Option<int>("--expiry") { Description = "The expiration time of the generated token in minutes.", DefaultValueFactory = _ => 5 };
+            var issOption = new Option<string>("--iss") { Description = "The issuer of the generated JWT. Defaults to the subject." };
+            var audOption = new Option<string>("--aud") { Description = "The audience for the generated token.", DefaultValueFactory = _ => "BWS" };
+            var algOption = new Option<string>("--alg") { Description = "The cryptographic algorithm used for the JWS, see https://datatracker.ietf.org/doc/html/rfc7518#section-3", DefaultValueFactory = _ => SecurityAlgorithms.HmacSha256 };
 
             // define command and handler
             var rootCommand = new RootCommand("BioID JWT generator mainly for use with BWS 3.")
             {
                 subOption, keyOption, expiryOption, issOption, audOption, algOption
             };
-            rootCommand.SetHandler(GenerateToken, subOption, keyOption, expiryOption, issOption, audOption, algOption);
+
+            rootCommand.SetAction(parseResult =>
+            {
+                var subject = parseResult.GetValue(subOption) ?? "";
+                var key = parseResult.GetValue(keyOption) ?? "";
+                var expiry = parseResult.GetValue(expiryOption);
+                var issuer = parseResult.GetValue(issOption);
+                var audience = parseResult.GetValue(audOption) ?? "";
+                var algorithm = parseResult.GetValue(algOption) ?? "";
+
+                GenerateToken(subject, key, expiry, issuer, audience, algorithm);
+            });
 
             // finally invoke the command
-            return await rootCommand.InvokeAsync(args);
+            return await rootCommand.Parse(args).InvokeAsync();
         }
 
-        internal static void GenerateToken(string subject, string key, int expireMinutes, string issuer, string audience, string algorithm)
+        internal static void GenerateToken(string subject, string key, int expireMinutes, string? issuer, string audience, string algorithm)
         {
             try
             {
@@ -42,7 +51,7 @@ namespace BioID.JwtGenerator
                 Console.WriteLine(jwt);
             }
 
-            catch (Exception ex)
+            catch(Exception ex) 
             {
                 Console.ForegroundColor = ConsoleColor.Red;
                 Console.Error.WriteLine($"Error: {ex.Message}");
