@@ -1,5 +1,4 @@
 ﻿using System.CommandLine;
-using System.CommandLine.Binding;
 using System.IO;
 using System.Threading.Tasks;
 
@@ -10,21 +9,22 @@ namespace Bws
         static async Task<int> Main(string[] args)
         {
             // define possible arguments
-            var fileArgument = new Argument<FileInfo>("file", "The image-file to process.");
-            var filesArgument = new Argument<FileInfo[]>("files", "List of image-files to process.");
-            var videoArgument = new Argument<FileInfo>("video", "The video-file to process.");
+            var fileArgument = new Argument<FileInfo>("file") { Description = "The image-file to process." };
+            var filesArgument = new Argument<FileInfo[]>("files") { Description = "List of image-files to process." };
+            var videoArgument = new Argument<FileInfo>("video") { Description = "The video-file to process." };
+
             // and options
-            var hostOption = new Option<string>("--host", "URL of the BWS to call.") { IsRequired = true };
-            var clientOption = new Option<string>("--clientid", "Your BWS Client Identifier (needed for JWT Bearer authentication).") { IsRequired = true };
-            var keyOption = new Option<string>("--key", "Your base64 encoded signing key (needed for JWT Bearer authentication).") { IsRequired = true };
-            var photoOption = new Option<FileInfo>("--photo", "ID photo input file.") { IsRequired = true };
-            var disableliveOption = new Option<bool>("--disablelive", "Disable liveness detection with PhotoVerify API.");
-            var challengeOption = new Option<string>("--challenge", "Optional head motion direction for the challenge response liveness detection mode (right, left, up, down). Requires two live images.");
-            var classOption = new Option<long>(["--classid", "-i"], "Unique class ID of the person associated with the biometric template.") { IsRequired = true };
-            var tagsOption = new Option<string[]>("--tags", "Tags associated with a biometric template.") { AllowMultipleArgumentsPerToken = true };
-            var restApiOption = new Option<bool>(["--rest", "-r"], "Use RESTful API call (instead of gRPC).");
-            var deadlineOption = new Option<int>(["--deadline", "-d"], "An optional deadline for the call (gRPC only) in milliseconds.");
-            var verbosityOption = new Option<Verbosity>(aliases: ["--verbosity", "-v"], description: "The output verbosity mode.", getDefaultValue: () => Verbosity.Normal);
+            var hostOption = new Option<string>("--host") { Required = true, Description = "URL of the BWS to call." };
+            var clientOption = new Option<string>("--clientid") { Required = true, Description = "Your BWS Client Identifier (needed for JWT Bearer authentication)." };
+            var keyOption = new Option<string>("--key") { Required = true, Description = "Your base64 encoded signing key (needed for JWT Bearer authentication)." };
+            var photoOption = new Option<FileInfo>("--photo") { Required = true, Description = "ID photo input file." };
+            var disableliveOption = new Option<bool>("--disablelive") { Description = "Disable liveness detection with PhotoVerify API." };
+            var challengeOption = new Option<string>("--challenge") { Description = "Optional head motion direction for the challenge response liveness detection mode (right, left, up, down). Requires two live images." };
+            var classOption = new Option<long>("--classid", "-i") { Description = "Unique class ID of the person associated with the biometric template.", Required = true };
+            var tagsOption = new Option<string[]>("--tags") { AllowMultipleArgumentsPerToken = true, Description = "Tags associated with a biometric template." };
+            var restApiOption = new Option<bool>("--rest", "-r") { Description = "Use RESTful API call (instead of gRPC)." };
+            var deadlineOption = new Option<int>("--deadline", "-d") { Description = "An optional deadline for the call (gRPC only) in milliseconds." };
+            var verbosityOption = new Option<Verbosity>("--verbosity", "-v") { Description = "The output verbosity mode.", DefaultValueFactory = _ => Verbosity.Normal };
 
             // define available sub-commands
             var healthCheckCommand = new Command("healthcheck", "Call into the gRPC health check API.")
@@ -70,6 +70,7 @@ namespace Bws
 
             // set the command handlers for our APIs
             var cb = new ConnectionBinder(hostOption, clientOption, keyOption, restApiOption, deadlineOption);
+
             healthCheckCommand.SetHandler(HealthCheckAsync, hostOption, restApiOption, verbosityOption);
             livedetectCommand.SetHandler(LiveDetectionAsync, cb, filesArgument, challengeOption, verbosityOption);
             videoLivedetectCommand.SetHandler(VideoLiveDetectionAsync, cb, videoArgument, verbosityOption);
@@ -82,18 +83,18 @@ namespace Bws
             deleteTemplateCommand.SetHandler(DeleteTemplateAsync, cb, classOption, verbosityOption);
 
             var rootCommand = new RootCommand("BWS 3 command-line interface.");
-            rootCommand.AddCommand(healthCheckCommand);
-            rootCommand.AddCommand(livedetectCommand);
-            rootCommand.AddCommand(videoLivedetectCommand);
-            rootCommand.AddCommand(photoVerifyCommand);
-            rootCommand.AddCommand(enrollmentCommand);
-            rootCommand.AddCommand(verifyCommand);
-            rootCommand.AddCommand(searchCommand);
-            rootCommand.AddCommand(setTagsCommand);
-            rootCommand.AddCommand(getTemplateCommand);
-            rootCommand.AddCommand(deleteTemplateCommand);
+            rootCommand.Subcommands.Add(healthCheckCommand);
+            rootCommand.Subcommands.Add(livedetectCommand);
+            rootCommand.Subcommands.Add(videoLivedetectCommand);
+            rootCommand.Subcommands.Add(photoVerifyCommand);
+            rootCommand.Subcommands.Add(enrollmentCommand);
+            rootCommand.Subcommands.Add(verifyCommand);
+            rootCommand.Subcommands.Add(searchCommand);
+            rootCommand.Subcommands.Add(setTagsCommand);
+            rootCommand.Subcommands.Add(getTemplateCommand);
+            rootCommand.Subcommands.Add(deleteTemplateCommand);
 
-            return await rootCommand.InvokeAsync(args);
+            return await rootCommand.Parse(args).InvokeAsync();
         }
 
         // Call HealthCheck API
@@ -224,7 +225,7 @@ namespace Bws
     /// <param name="keyOption">The commandline option for the client key.</param>
     /// <param name="restApiOption">The commandline option for enabling the REST API mode.</param>
     /// <param name="deadlineOption">The commandline option for setting the timeout deadline.</param>
-    class ConnectionBinder(Option<string> hostOption, Option<string> clientOption, Option<string> keyOption, Option<bool> restApiOption, Option<int> deadlineOption) : BinderBase<Connection>
+    public class ConnectionBinder(Option<string> hostOption, Option<string> clientOption, Option<string> keyOption, Option<bool> restApiOption, Option<int> deadlineOption)
     {
         private readonly Option<string> _hostOption = hostOption;
         private readonly Option<string> _clientOption = clientOption;
@@ -233,18 +234,19 @@ namespace Bws
         private readonly Option<int> _deadlineOption = deadlineOption;
 
         /// <summary>
-        /// Creates a <see cref="Connection"/> object based on the provided binding context and commandline options.
+        /// Creates a new <see cref="Connection"/> instance by extracting the values from the parsed command line options.
         /// </summary>
-        /// <param name="bindingContext">The context containing parsed commandline arguments.</param>
-        /// <returns>A configured <see cref="Connection"/> object.</returns>
-        protected override Connection GetBoundValue(BindingContext bindingContext) =>
+        /// <param name="result">The result of the command line parsing, used to retrieve the option values.</param>
+        /// <returns>A fully configured <see cref="Connection"/> object.</returns>
+        public Connection GetBoundValue(ParseResult result) =>
             new()
             {
-                Host = bindingContext.ParseResult.GetValueForOption(_hostOption)!,
-                ClientId = bindingContext.ParseResult.GetValueForOption(_clientOption)!,
-                Key = bindingContext.ParseResult.GetValueForOption(_keyOption)!,
-                RestApi = bindingContext.ParseResult.GetValueForOption(_restApiOption),
-                Deadline = bindingContext.ParseResult.GetValueForOption(_deadlineOption)
+                Host = result.GetValue(_hostOption)!,
+                ClientId = result.GetValue(_clientOption)!,
+                Key = result.GetValue(_keyOption)!,
+                RestApi = result.GetValue(_restApiOption),
+                Deadline = result.GetValue(_deadlineOption)
             };
     }
 }
+

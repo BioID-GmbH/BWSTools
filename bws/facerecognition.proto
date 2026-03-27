@@ -47,7 +47,7 @@ message FaceEnrollmentResponse {
     EnrollmentAction performed_action = 4;
     // Number of newly enrolled images.
     int32 enrolled_images = 5;
-    // The status of the created/exisitng template.
+    // The status of the created/existing template.
     FaceTemplateStatus template_status = 6;
 
     // Possible actions performed by the enrollment API.

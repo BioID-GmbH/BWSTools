@@ -440,10 +440,10 @@ namespace Bws
 
                 // creates request
                 var request = new FaceSearchRequest();
-                foreach (var file in files)
-                {
+                foreach (var file in files) 
+                { 
                     var img = new ImageData { Image = ByteString.CopyFrom(File.ReadAllBytes(file.FullName)) };
-                    img.Tags.Add(file.Name);
+                    img.Tags.Add(file.Name); 
                     request.Images.Add(img);
                 }
                 request.Tags.AddRange(tags);
