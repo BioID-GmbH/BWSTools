@@ -16,7 +16,7 @@
 
   <ItemGroup>
     <PackageReference Include="System.CommandLine" Version="2.0.10" />
-    <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.19.2" />
+    <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.20.0" />
   </ItemGroup>
 
 </Project>
